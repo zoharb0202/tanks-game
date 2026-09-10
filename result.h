@@ -3,6 +3,7 @@
 
 #include <string>
 #include <deque>
+#include <vector>
 
 class Result {
 private:
@@ -17,6 +18,9 @@ public:
 
     // Flush all recorded entries into the .result file, then clear them
     void writeToFile(int randomseed);
+
+    // Same lines writeToFile() would write, without touching the disk
+    std::vector<std::string> toLines(int randomseed) const;
 
 
 };

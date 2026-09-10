@@ -1,7 +1,7 @@
 #pragma once
-#include "Point.h"
+#include "point.h"
 #include <vector>
-#include "Shell.h"
+#include "shell.h"
 #include "gameConfig.h"
 #include <set>
 

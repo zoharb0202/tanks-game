@@ -1,3 +1,4 @@
+#pragma once
 #define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <fstream>
@@ -46,6 +47,6 @@ public:
 	bool checkReturn() { return ReturnToMenu; }
 	int chooseGameMode();
 	void initPlayersByMode(int modeChoice, std::unique_ptr<Player>& p1, std::unique_ptr<Player>& p2);
-	bool compareResultsSilent(const std::string& baseName);
+	bool compareResultsSilent(const std::string& baseName, const std::vector<std::string>& actual);
 };
 

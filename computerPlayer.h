@@ -1,6 +1,6 @@
 #pragma once
 #include "player.h"
-#include "Tank.h"
+#include "tank.h"
 #include <vector>
 #include <map>
 #include "shell.h"

@@ -1,5 +1,5 @@
-#include "Tank.h"
-#include "GameConfig.h"
+#include "tank.h"
+#include "gameConfig.h"
 #include <iostream>
 #include <windows.h>
 #include "general.h"
@@ -327,10 +327,7 @@ bool stay = keys.count('K');
         }
     }
 
-    // 4) Move if flagged
-    if (isMoving) {
-        move(velocity.getX(), velocity.getY(), board);
-    }
+    
 }
 
 

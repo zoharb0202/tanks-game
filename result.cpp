@@ -23,3 +23,10 @@ void Result::writeToFile(int randomseed) {
     }
     ofs.close();
 }
+
+std::vector<std::string> Result::toLines(int randomseed) const {
+    std::vector<std::string> lines;
+    lines.push_back(std::to_string(randomseed));
+    lines.insert(lines.end(), entries_.begin(), entries_.end());
+    return lines;
+}

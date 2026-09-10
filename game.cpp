@@ -1,5 +1,5 @@
 #include "game.h"
-#include "Tank.h"         
+#include "tank.h"         
 #include <conio.h>
 #include <Windows.h>
 #include <iostream>
@@ -422,7 +422,10 @@ void Game::handleShells(vector<Shell>& shells, Player& p1, Player& p2, bool& run
 						if (id == player->getControlledTank())
 							player->changeControlledTank();
 
-						tanksMap.erase(id);
+						Tank* destroyedTank = tank;
+                    int destroyedId = id;
+                    tanksMap.erase(destroyedId);
+                    delete destroyedTank;
 
 						if (s.player != player->getPlayerID())
 							(s.player == 1 ? updateScoreP1(5) : updateScoreP2(5));
@@ -502,7 +505,7 @@ void Game::handleShells(vector<Shell>& shells, Player& p1, Player& p2, bool& run
 }
 
 
-bool Game::compareResultsSilent(const std::string& baseName) {
+bool Game::compareResultsSilent(const std::string& baseName, const std::vector<std::string>& actual) {
 	const std::string fileName = baseName + ".result";
 
 	// 1) Read expected from disk
@@ -513,14 +516,13 @@ bool Game::compareResultsSilent(const std::string& baseName) {
 	}
 	std::vector<std::string> expected;
 	std::string line;
-	while (std::getline(expifs, line)) expected.push_back(line);
+	while (std::getline(expifs, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        expected.push_back(line);
+    }
 	expifs.close();
 
-	// 2) Read actual (just written) from disk
-	std::ifstream actifs(fileName);
-	std::vector<std::string> actual;
-	while (std::getline(actifs, line)) actual.push_back(line);
-	actifs.close();
+	// 2) Actual results come from the replay that just ran (passed in)
 
 	// 3) Compare
 	bool pass = (expected.size() == actual.size());
@@ -747,7 +749,11 @@ void Game::run(bool isLoad, bool isSave, bool isSilent) {
 						}
 					}
 
-					if (p1->isComputer())
+					std::set<char> replayKeys;
+            if (isLoad && steps.isNextStepOnIteration(iteration))
+                replayKeys = steps.popStep();
+
+            if (p1->isComputer())
 						p1->handleTurn(board, shells);
 
 					if (p2->isComputer())
@@ -756,7 +762,7 @@ void Game::run(bool isLoad, bool isSave, bool isSilent) {
 					bool currMove;
 					Point currVelocity;
 					if (!(p1->isComputer())) {
-						if (GetAsyncKeyState('Z') & 0x8000) {
+						if (isLoad ? replayKeys.count('Z') > 0 : (GetAsyncKeyState('Z') & 0x8000) != 0) {
 							if (isSave) {
 								std::set<char> keysThisTick;
 								keysThisTick.insert('Z');
@@ -774,7 +780,7 @@ void Game::run(bool isLoad, bool isSave, bool isSilent) {
 					}
 
 					if (!(p2->isComputer())) {
-						if (GetAsyncKeyState('M') & 0x8000) {
+						if (isLoad ? replayKeys.count('M') > 0 : (GetAsyncKeyState('M') & 0x8000) != 0) {
 							if (isSave) {
 								std::set<char> keysThisTick;
 								keysThisTick.insert('M');
@@ -797,11 +803,8 @@ void Game::run(bool isLoad, bool isSave, bool isSilent) {
 							if (it1 != p1->getTanksMap().end() && it1->second != nullptr) {
 								std::set<char> keysThisTick;
 								if (isLoad) {
-									if (steps.isNextStepOnIteration(iteration)) {
-									
-										keysThisTick = steps.popStep();
-									}
-								}
+                        keysThisTick = replayKeys;
+                    }
 								else {
 									if (GetAsyncKeyState('Q') & 0x8000) keysThisTick.insert('Q'); // LEFT track forward
 									if (GetAsyncKeyState('A') & 0x8000) keysThisTick.insert('A'); // LEFT track backward
@@ -838,11 +841,8 @@ void Game::run(bool isLoad, bool isSave, bool isSilent) {
 							if (it2 != p2->getTanksMap().end() && it2->second != nullptr) {
 								std::set<char> keysThisTick;
 								if (isLoad) {
-									if (steps.isNextStepOnIteration(iteration)) {
-										
-										keysThisTick = steps.popStep();
-									}
-								}
+                        keysThisTick = replayKeys;
+                    }
 								else
 								{
 									if (GetAsyncKeyState('U') & 0x8000) keysThisTick.insert('U'); // LEFT track forward
@@ -857,6 +857,16 @@ void Game::run(bool isLoad, bool isSave, bool isSilent) {
 								}
 								it2->second->checkKeysP2(p2.get(), board, keysThisTick);
 								it2->second->tick();
+
+                    if (keysThisTick.count('I') &&
+                        it2->second->isCannonActive() &&
+                        it2->second->getShootCooldown() == 0) {
+                        shells.emplace_back(
+                            it2->second->getPosition().add(it2->second->getPointFromDir(it2->second->getCannonDir())),
+                            it2->second->getPointFromDir(it2->second->getCannonDir()));
+                        shells.back().player = 2;
+                        it2->second->setShootCooldown(HUMAN_COOLDOWN);
+                    }
 
 							}
 						}
@@ -916,20 +926,7 @@ void Game::run(bool isLoad, bool isSave, bool isSilent) {
 
 
 
-					if (!(p2->isComputer())) {
-						if (p2->getControlledTank() != -1) {
-							auto it2 = p2->getTanksMap().find(p2->getControlledTank());
-							if (it2 != p2->getTanksMap().end() && it2->second != nullptr) {
-								if ((GetAsyncKeyState('I') & 0x8000) && it2->second->isCannonActive() && it2->second->getShootCooldown() == 0) {
-									shells.emplace_back(
-										it2->second->getPosition().add(it2->second->getPointFromDir(it2->second->getCannonDir())),
-										it2->second->getPointFromDir(it2->second->getCannonDir()));
-									shells.back().player = 2;
-									it2->second->setShootCooldown(HUMAN_COOLDOWN);
-								}
-							}
-						}
-					}
+					
 					if(!(isSilent&&isLoad))
 					{
 						for (auto& [tankID, tankPtr] : p1->getTanksMap()) {
@@ -979,10 +976,10 @@ void Game::run(bool isLoad, bool isSave, bool isSilent) {
 					result.writeToFile(steps.getRandomSeed());
 				}
 				if (isLoad && isSilent) {
-					// compare and exit
-					compareResultsSilent(baseName);
-					return;
-				}
+                // compare this screen's replay against its expected .result, then continue to the next screen
+                result.pushResult("SCORE P1=" + std::to_string(Game::scoreP1) + " P2=" + std::to_string(Game::scoreP2));
+                compareResultsSilent(baseName, result.toLines(steps.getRandomSeed()));
+            }
 			}
 
 

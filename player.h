@@ -1,7 +1,7 @@
 #pragma once
 #include "point.h"
 #include <map>
-#include "Tank.h"
+#include "tank.h"
 
 
 using std::map;

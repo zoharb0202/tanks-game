@@ -27,6 +27,11 @@ public:
     }
 
     void addStep(size_t iteration, const std::set<char>& keys) {
+        // all keys pressed on the same tick are stored as one entry
+        if (!steps.empty() && steps.back().first == iteration) {
+            steps.back().second.insert(keys.begin(), keys.end());
+            return;
+        }
         steps.emplace_back(iteration, keys);
     }
 
